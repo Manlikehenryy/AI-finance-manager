@@ -12,7 +12,7 @@ export const transactionValidationSchema = z.object({
 });
 
 export const idValidationSchema = z.object({
-  id: z.string().uuid("Invalid Id")
+  id: z.string({message:"Invalid Id"})
 });
 
 
