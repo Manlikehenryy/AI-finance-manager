@@ -10,6 +10,9 @@ import { TransactionDocument } from "../models/transaction.model";
 import Budget from "../models/budget.model";
 import fetchWeeklyExpenses from "../utils/fetchWeeklyExpense";
 import * as tf from "@tensorflow/tfjs";
+import Prediction, { TimeFrame } from "../models/prediction.model";
+import moment from "moment";
+import { getPrediction } from "../utils/getPrediction";
 
 export const createTransaction = async (
   req: CustomRequest,
@@ -155,45 +158,57 @@ export const deleteTransaction = async (
   }
 };
 
-export const predictExpense = async (req: CustomRequest, res: Response, next: NextFunction) => {
+export const predictExpense = async (
+  req: CustomRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const { transformedWeeklyExpenses, lastWeekExpenses } = await fetchWeeklyExpenses(req.user.id);
-  
-    // Normalize the data
-    const normalizedExpenses = transformedWeeklyExpenses.map(
-      (expense) => expense / 1000
-    );
-  
-    // Define a simple model
-    const model = tf.sequential();
-    model.add(
-      tf.layers.dense({ inputShape: [1], units: 50, activation: "relu" })
-    );
-    model.add(tf.layers.dense({ units: 50, activation: "relu" }));
-    model.add(tf.layers.dense({ units: 1 }));
-  
-    model.compile({ optimizer: "adam", loss: "meanSquaredError" });
-  
-    // Prepare the training data
-    const xs = tf.tensor2d(normalizedExpenses.slice(0, 5).map((x) => [x]));
-    const ys = tf.tensor2d(normalizedExpenses.slice(1).map((y) => [y]));
-  
-    //train model
-    await model.fit(xs, ys, { epochs: 100 });
-  
-  
-    // Normalize the input
-    const normalizedInput = lastWeekExpenses / 1000;
-  
-    // Predict future expense
-    const prediction = model.predict(
-      tf.tensor2d([normalizedInput], [1, 1])
-    ) as tf.Tensor;
-  
-    const predictedExpense = prediction.dataSync()[0] * 1000; // Denormalize the output
-  
-    return sendSuccessResponse(res, 200, { predictedExpense });
+    const currentDate = moment();
+
+    const startOfWeek = currentDate.startOf("week").toDate();
+
+    const endOfWeek = currentDate.endOf("week").toDate();
+
+    //checks for prediction within the current week
+    const existingPrediction = await Prediction.findOne({
+      createdAt: {
+        $gte: startOfWeek,
+        $lte: endOfWeek,
+      },
+    });
+
+    if (existingPrediction) {
+      return sendSuccessResponse(res, 200, {
+        predictedExpense: existingPrediction.predictedAmount,
+      });
+    } else {
+      const { transformedWeeklyExpenses, lastWeekExpenses } =
+        await fetchWeeklyExpenses(req.user.id);
+
+      // Normalize the data
+      const normalizedExpenses = transformedWeeklyExpenses.map(
+        (expense) => expense / 1000
+      );
+
+      const predictedExpense = await getPrediction(
+        normalizedExpenses,
+        lastWeekExpenses
+      );
+
+      const newPrediction = new Prediction({
+        user: req.user.id,
+        predictedAmount: predictedExpense,
+        timeFrame: TimeFrame.weekly,
+      });
+
+      if (newPrediction) {
+        await newPrediction.save();
+      }
+
+      return sendSuccessResponse(res, 200, { predictedExpense });
+    }
   } catch (error) {
-    next(error)
+    next(error);
   }
 };
