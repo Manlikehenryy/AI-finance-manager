@@ -1,6 +1,6 @@
 // src/app.ts
 import dotenv from "dotenv";
-import express, { Request, Response } from "express";
+import express from "express";
 import cookieParser from "cookie-parser";
 import connectToMongoDB from "./db/connectToMongoDB ";
 import authRoutes from "./routes/auth.route";

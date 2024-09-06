@@ -27,7 +27,7 @@ export const createTransaction = async (
       await Budget.findOneAndUpdate(
         {
           user: req.user._id,
-          category: category,
+          category: new RegExp(`^${category}$`, 'i'),
           endDate: { $gte: transactionDate },
           startDate: { $lte: transactionDate },
         },
