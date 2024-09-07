@@ -21,7 +21,7 @@ export const createBudget = async (
     // Check for overlapping budget
     const existingBudget = await Budget.findOne({
       user: req.user._id,
-      category: category,
+      category: new RegExp(`^${category}$`, 'i'),
       endDate: { $gte: startDate },
     });
 
@@ -87,8 +87,9 @@ export const updateBudget = async (
      // Check for overlapping budget
      const existingBudget = await Budget.findOne({
       user: req.user._id,
-      category: data.category,
+      category: new RegExp(`^${data.category}$`, 'i'),
       endDate: { $gte: data.startDate },
+      _id: { $ne: id }, // Exclude the current budget with this id
     });
 
     if (existingBudget) {

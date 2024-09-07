@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import connectToMongoDB from "./db/connectToMongoDB ";
 import authRoutes from "./routes/auth.route";
 import transactionRoutes from "./routes/transaction.route";
+import budgetRoutes from "./routes/budget.route";
 import { errorHandler } from "./utils/errorHandler";
 import protectRoute from "./middleware/protectRoute";
 
@@ -19,6 +20,7 @@ const port = process.env.PORT || 3000;
 
 app.use("/api/auth", authRoutes);
 app.use("/api/transaction", protectRoute, transactionRoutes);
+app.use("/api/budget", protectRoute, budgetRoutes);
 
 app.use(errorHandler);
 

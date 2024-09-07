@@ -32,8 +32,8 @@ export const budgetUpdateValidationSchema = z.object({
   allocatedAmount: z.number().positive(),
   spentAmount: z.number().nonnegative(),
   category: z.string(),
-  startDate: z.date(),
-  endDate: z.date(),
+  startDate:  z.string().date("Invalid date"),
+  endDate:  z.string().date("Invalid date"),
 })
 .refine((data) => data.startDate <= data.endDate, {
   message: "startDate must not be greater than endDate",
@@ -41,7 +41,7 @@ export const budgetUpdateValidationSchema = z.object({
 })
 
 export const idValidationSchema = z.object({
-  id: z.string().uuid("Invalid Id")
+  id: z.string({message:"Invalid Id"})
 });
 
 export interface BudgetDocument extends Document {
