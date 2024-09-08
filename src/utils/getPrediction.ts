@@ -1,6 +1,9 @@
 import * as tf from "@tensorflow/tfjs";
+import moment from "moment";
+import Prediction, { TimeFrame } from "../models/prediction.model";
+import fetchWeeklyExpenses from "./fetchWeeklyExpense";
 
-export const getPrediction = async (
+const getPrediction = async (
   normalizedExpenses: number[],
   lastWeekExpenses: number
 ): Promise<number> => {
@@ -32,4 +35,52 @@ export const getPrediction = async (
   const predictedExpense = prediction.dataSync()[0] * 1000; // Denormalize the output
 
   return predictedExpense;
+};
+
+export const predictExpense = async (userId: string) => {
+  const currentDate = moment();
+
+  const startOfWeek = currentDate.startOf("week").toDate();
+
+  const endOfWeek = currentDate.endOf("week").toDate();
+
+
+  //checks for prediction within the current week
+  const existingPrediction = await Prediction.findOne({
+    createdAt: {
+      $gte: startOfWeek,
+      $lte: endOfWeek,
+    },
+  });
+
+  if (existingPrediction) {
+    return existingPrediction.predictedAmount;
+  } else {
+    const { transformedWeeklyExpenses, lastWeekExpenses } =
+      await fetchWeeklyExpenses(userId);
+
+    // Normalize the data
+    const normalizedExpenses = transformedWeeklyExpenses.map(
+      (expense) => expense / 1000
+    );
+
+    const predictedExpense = await getPrediction(
+      normalizedExpenses,
+      lastWeekExpenses
+    );
+
+    const newPrediction = new Prediction({
+      user: userId,
+      predictedAmount: predictedExpense,
+      timeFrame: TimeFrame.weekly,
+    });
+
+    if (newPrediction) {
+      await newPrediction.save();
+    }
+    if(predictedExpense < 0){
+      return 0;
+    }
+    return predictedExpense.toFixed(2);
+  }
 };

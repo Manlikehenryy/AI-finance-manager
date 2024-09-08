@@ -8,11 +8,8 @@ import { sendErrorResponse, sendSuccessResponse } from "../utils/apiResonse";
 import { paginate } from "../utils/paginate";
 import { TransactionDocument } from "../models/transaction.model";
 import Budget from "../models/budget.model";
-import fetchWeeklyExpenses from "../utils/fetchWeeklyExpense";
-import * as tf from "@tensorflow/tfjs";
-import Prediction, { TimeFrame } from "../models/prediction.model";
-import moment from "moment";
-import { getPrediction } from "../utils/getPrediction";
+import { predictExpense } from "../utils/getPrediction";
+import { getTotalTransaction, getCategoryStats, getTransactionStats } from '../utils/getStats';
 
 export const createTransaction = async (
   req: CustomRequest,
@@ -158,56 +155,19 @@ export const deleteTransaction = async (
   }
 };
 
-export const predictExpense = async (
+export const getStats = async (
   req: CustomRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const currentDate = moment();
+    const totalTransactions = await getTotalTransaction(req.user._id);
+    const categoryStats = await getCategoryStats(req.user._id)
+    const expenseStats = await getTransactionStats(req.user._id, "expense")
+    const incomeStats = await getTransactionStats(req.user._id, "income")
+    const currentWeekPrediction = await predictExpense(req.user._id)
+    return sendSuccessResponse(res, 200, {totalTransactions, categoryStats, expenseStats, incomeStats, currentWeekPrediction});
 
-    const startOfWeek = currentDate.startOf("week").toDate();
-
-    const endOfWeek = currentDate.endOf("week").toDate();
-
-    //checks for prediction within the current week
-    const existingPrediction = await Prediction.findOne({
-      createdAt: {
-        $gte: startOfWeek,
-        $lte: endOfWeek,
-      },
-    });
-
-    if (existingPrediction) {
-      return sendSuccessResponse(res, 200, {
-        predictedExpense: existingPrediction.predictedAmount,
-      });
-    } else {
-      const { transformedWeeklyExpenses, lastWeekExpenses } =
-        await fetchWeeklyExpenses(req.user.id);
-
-      // Normalize the data
-      const normalizedExpenses = transformedWeeklyExpenses.map(
-        (expense) => expense / 1000
-      );
-
-      const predictedExpense = await getPrediction(
-        normalizedExpenses,
-        lastWeekExpenses
-      );
-
-      const newPrediction = new Prediction({
-        user: req.user.id,
-        predictedAmount: predictedExpense,
-        timeFrame: TimeFrame.weekly,
-      });
-
-      if (newPrediction) {
-        await newPrediction.save();
-      }
-
-      return sendSuccessResponse(res, 200, { predictedExpense });
-    }
   } catch (error) {
     next(error);
   }

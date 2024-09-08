@@ -1,10 +1,10 @@
 import express from "express";
-import { createTransaction, deleteTransaction, getAllTransactions, getTransaction, predictExpense, updateTransaction } from "../controllers/transaction.controller";
+import { createTransaction, deleteTransaction, getAllTransactions, getTransaction, getStats, updateTransaction } from "../controllers/transaction.controller";
 
 
 const router = express.Router();
 
-router.get("/predict-expense", predictExpense);
+router.get("/get-stats", getStats);
 router.post("/", createTransaction);
 router.get("/", getAllTransactions);
 router.get("/:id", getTransaction);
