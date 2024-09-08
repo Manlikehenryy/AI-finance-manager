@@ -54,6 +54,9 @@ export const predictExpense = async (userId: string) => {
   });
 
   if (existingPrediction) {
+    if( existingPrediction.predictedAmount < 0){
+      return 0;
+    }
     return existingPrediction.predictedAmount;
   } else {
     const { transformedWeeklyExpenses, lastWeekExpenses } =
@@ -71,7 +74,7 @@ export const predictExpense = async (userId: string) => {
 
     const newPrediction = new Prediction({
       user: userId,
-      predictedAmount: predictedExpense,
+      predictedAmount: predictedExpense.toFixed(2),
       timeFrame: TimeFrame.weekly,
     });
 

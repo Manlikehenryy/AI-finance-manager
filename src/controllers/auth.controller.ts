@@ -4,6 +4,7 @@ import { NextFunction, Request, Response } from "express";
 import { userValidationSchema } from "../models/user.model";
 import generateTokenAndSetCookie from "../utils/generateToken";
 import { sendErrorResponse, sendSuccessResponse } from "../utils/apiResonse";
+import isTokenExpired from "../utils/isTokenExpired";
 
 export const signUp = async (
   req: Request,
@@ -101,3 +102,20 @@ export const signOut = (req: Request, res: Response, next: NextFunction) => {
     next(error);
   }
 };
+
+export const hasTokenExpired = (req: Request, res: Response, next: NextFunction) =>{
+  try {
+  const token = req.cookies.jwt;
+
+  if (isTokenExpired(token)) {
+    return sendSuccessResponse(res, 200, null, "Session has expired");
+  }
+  else{
+    return sendSuccessResponse(res, 200, null, "Session has not expired");
+  }
+
+  
+} catch (error) {
+  next(error);
+}
+}
