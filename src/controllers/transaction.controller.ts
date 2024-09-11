@@ -9,7 +9,12 @@ import { paginate } from "../utils/paginate";
 import { TransactionDocument } from "../models/transaction.model";
 import Budget from "../models/budget.model";
 import { predictExpense } from "../utils/getPrediction";
-import { getTotalTransaction, getCategoryStats, getTransactionStats } from '../utils/getStats';
+import {
+  getTotalTransaction,
+  getCategoryStats,
+  getTransactionStats,
+} from "../utils/getStats";
+import { getLastWeekExpense } from "../utils/fetchWeeklyExpense";
 
 export const createTransaction = async (
   req: CustomRequest,
@@ -24,7 +29,7 @@ export const createTransaction = async (
       await Budget.findOneAndUpdate(
         {
           user: req.user._id,
-          category: new RegExp(`^${category}$`, 'i'),
+          category: new RegExp(`^${category}$`, "i"),
           endDate: { $gte: transactionDate },
           startDate: { $lte: transactionDate },
         },
@@ -161,13 +166,30 @@ export const getStats = async (
   next: NextFunction
 ) => {
   try {
-    const totalTransactions = await getTotalTransaction(req.user._id);
-    const categoryStats = await getCategoryStats(req.user._id)
-    const expenseStats = await getTransactionStats(req.user._id, "expense")
-    const incomeStats = await getTransactionStats(req.user._id, "income")
-    const currentWeekPrediction = await predictExpense(req.user._id)
-    return sendSuccessResponse(res, 200, {totalTransactions, categoryStats, expenseStats, incomeStats, currentWeekPrediction});
+    const [
+      totalTransactions,
+      categoryStats,
+      expenseStats,
+      incomeStats,
+      currentWeekPrediction,
+      lastWeekExpense,
+    ] = await Promise.all([
+      getTotalTransaction(req.user._id),
+      getCategoryStats(req.user._id),
+      getTransactionStats(req.user._id, "expense"),
+      getTransactionStats(req.user._id, "income"),
+      predictExpense(req.user._id),
+      getLastWeekExpense(req.user._id),
+    ]);
 
+    return sendSuccessResponse(res, 200, {
+      totalTransactions,
+      categoryStats,
+      expenseStats,
+      incomeStats,
+      currentWeekPrediction,
+      lastWeekExpense,
+    });
   } catch (error) {
     next(error);
   }

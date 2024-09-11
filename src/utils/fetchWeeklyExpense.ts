@@ -12,7 +12,6 @@ const fetchWeeklyExpenses = async (
   const startOfSixWeeksAgo = moment().startOf("isoWeek").subtract(6, "week");
   const endOfLastWeek = moment().startOf("isoWeek");
 
-
   const weeklyExpenses = await Transaction.aggregate([
     {
       $match: {
@@ -38,24 +37,7 @@ const fetchWeeklyExpenses = async (
     },
   ]);
 
-  const lastWeekExpenses = await Transaction.aggregate([
-    {
-      $match: {
-        user: new mongoose.Types.ObjectId(userId),
-        transactionDate: {
-          $gte: startOfLastWeek.toDate(),
-          $lt: endOfLastWeek.toDate(),
-        },
-        type: "expense",
-      },
-    },
-    {
-      $group: {
-        _id: null,
-        totalAmount: { $sum: "$amount" },
-      },
-    },
-  ]);
+  const lastWeekExpenses = await getLastWeekExpense(userId);
 
   const transformedWeeklyExpenses = weeklyExpenses.map(
     (week) => week.totalAmount
@@ -74,8 +56,32 @@ const fetchWeeklyExpenses = async (
   }
   return {
     transformedWeeklyExpenses,
-    lastWeekExpenses: lastWeekExpenses[0]?.totalAmount || 0,
+    lastWeekExpenses,
   };
+};
+
+export const getLastWeekExpense = async (userId: string) => {
+  const lastWeekExpenses = await Transaction.aggregate([
+    {
+      $match: {
+        user: new mongoose.Types.ObjectId(userId),
+        transactionDate: {
+          $gte: moment().startOf("isoWeek").subtract(1, "week").toDate(),
+          $lt: moment().startOf("isoWeek").toDate(),
+        },
+        type: "expense",
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalAmount: { $sum: "$amount" },
+      },
+    },
+  ]);
+
+  const expense = lastWeekExpenses[0]?.totalAmount || 0;
+  return expense;
 };
 
 export default fetchWeeklyExpenses;

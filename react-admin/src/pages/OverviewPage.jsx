@@ -38,12 +38,19 @@ const OverviewPage = () => {
               value={`$${stats.currentWeekPrediction}`}
               color="#6366F1"
             />
+             <StatCard
+              name="Last Week's Expense"
+              icon={BarChart2}
+              value={`$${stats.lastWeekExpense}`}
+              color="#6366F1"
+            />
             <StatCard
               name="Total Transaction"
               icon={BarChart2}
               value={stats.totalTransactions}
               color="#8B5CF6"
             />
+            
           </motion.div>
 
           {/* CHARTS */}
