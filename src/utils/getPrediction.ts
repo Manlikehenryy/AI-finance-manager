@@ -2,6 +2,7 @@ import * as tf from "@tensorflow/tfjs";
 import moment from "moment";
 import Prediction, { TimeFrame } from "../models/prediction.model";
 import fetchWeeklyExpenses from "./fetchWeeklyExpense";
+import mongoose from "mongoose";
 
 const getPrediction = async (
   normalizedExpenses: number[],
@@ -47,6 +48,7 @@ export const predictExpense = async (userId: string) => {
 
   //checks for prediction within the current week
   const existingPrediction = await Prediction.findOne({
+    user: new mongoose.Types.ObjectId(userId),
     createdAt: {
       $gte: startOfWeek,
       $lte: endOfWeek,
@@ -73,7 +75,7 @@ export const predictExpense = async (userId: string) => {
     );
 
     const newPrediction = new Prediction({
-      user: userId,
+      user: new mongoose.Types.ObjectId(userId),
       predictedAmount: predictedExpense.toFixed(2),
       timeFrame: TimeFrame.weekly,
     });
